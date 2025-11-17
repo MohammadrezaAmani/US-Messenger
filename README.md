@@ -2,6 +2,9 @@
 
 A production-ready, scalable chat service built with Django 5, Django REST Framework, Django Channels, and PostgreSQL. Features real-time messaging, file attachments, user presence, and comprehensive notification system.
 
+> [!IMPORTANT]
+> Client is available at [USClient](https://github.com/MohammadrezaAmani/usclient)
+
 ## 🚀 Features
 
 - **Real-time Chat**: WebSocket-based messaging with Django Channels
