@@ -1,0 +1,108 @@
+version: '3.8'
+
+services:
+  django:
+    build: .
+    container_name: chat_django
+    command: uv run daphne -b 0.0.0.0 -p 8000 config.asgi:application
+    volumes:
+      - .:/app
+      - staticfiles:/app/staticfiles
+      - media:/app/media
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.prod
+      - DEBUG=False
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-prod-key-change-me}
+      - DB_NAME=${DB_NAME:-chat_db}
+      - DB_USER=${DB_USER:-amani}
+      - DB_PASSWORD=${DB_PASSWORD:-chat_password}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+      - USE_S3=${USE_S3:-False}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15
+    container_name: chat_postgres
+    environment:
+      - POSTGRES_DB=${DB_NAME:-chat_db}
+      - POSTGRES_USER=${DB_USER:-amani}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-chat_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: chat_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  celery_worker:
+    build: .
+    container_name: chat_celery_worker
+    command: uv run celery -A config worker --loglevel=info
+    volumes:
+      - .:/app
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.prod
+      - DEBUG=False
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-prod-key-change-me}
+      - DB_NAME=${DB_NAME:-chat_db}
+      - DB_USER=${DB_USER:-amani}
+      - DB_PASSWORD=${DB_PASSWORD:-chat_password}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  celery_beat:
+    build: .
+    container_name: chat_celery_beat
+    command: uv run celery -A config beat --loglevel=info
+    volumes:
+      - .:/app
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.prod
+      - DEBUG=False
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-prod-key-change-me}
+      - DB_NAME=${DB_NAME:-chat_db}
+      - DB_USER=${DB_USER:-amani}
+      - DB_PASSWORD=${DB_PASSWORD:-chat_password}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  staticfiles:
+  media:
